@@ -1,6 +1,6 @@
 # Arduino-learning-journey..
 
-Its my journey of learning of my initial Stages in Electronics.
+It's my journey of learning in my initial stages in electronics.
 
 This repository collects small Arduino projects I build while learning
 electronics. Each project lives in its own folder under `projects/`, with
