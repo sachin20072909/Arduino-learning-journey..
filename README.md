@@ -21,6 +21,9 @@ comments in the code explaining the wiring and the concepts learned.
 | 08 | [Ultrasonic Parking Sensor](projects/08_Ultrasonic_Parking_Sensor) | Measures distance and beeps faster when closer | HC-SR04, `pulseIn()`, timing |
 | 09 | [Servo Motor Sweep](projects/09_Servo_Motor_Sweep) | Sweeps a servo 0°–180° | libraries, `Servo.h` |
 | 10 | [Knock Detector](projects/10_Knock_Detector) | LED lights when the desk is knocked | piezo as sensor, `millis()` |
+| 11 | **[Parkwise AI - Smart Parking](parkwise-ai/)** | AI + IoT parking lot with 12 slots, live dashboard | ESP32, YOLOv8, FastAPI, WebSocket |
+
+> 🚀 **NEW: Parkwise AI Hackathon Project** - See [parkwise-ai/README.md](parkwise-ai/README.md) - My journey from Project 08 (Ultrasonic Parking Sensor) to full Smart City solution with ESP32 + YOLOv8 + Real-time Dashboard. [Live Demo Guide](parkwise-ai/docs/ROADMAP.md)
 
 ## Parts used across the projects
 
