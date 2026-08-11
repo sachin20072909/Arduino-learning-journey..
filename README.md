@@ -21,6 +21,7 @@ comments in the code explaining the wiring and the concepts learned.
 | 08 | [Ultrasonic Parking Sensor](projects/08_Ultrasonic_Parking_Sensor) | Measures distance and beeps faster when closer | HC-SR04, `pulseIn()`, timing |
 | 09 | [Servo Motor Sweep](projects/09_Servo_Motor_Sweep) | Sweeps a servo 0°–180° | libraries, `Servo.h` |
 | 10 | [Knock Detector](projects/10_Knock_Detector) | LED lights when the desk is knocked | piezo as sensor, `millis()` |
+| 11 | [Parkwise AI Node](projects/11_Parkwise_AI_Node) | Smart parking bay: ultrasonic occupancy detection + status LEDs + servo boom barrier + buzzer guidance + serial telemetry | state machine, debounce, non-blocking `millis()`, CSV telemetry, Python dashboard |
 
 ## Parts used across the projects
 
@@ -34,6 +35,10 @@ comments in the code explaining the wiring and the concepts learned.
 - Piezo buzzers x2 (one as sound, one as vibration sensor)
 - HC-SR04 ultrasonic sensor
 - SG90 micro servo
+- Extra LEDs (red + green) for status indicators
+
+> **Project 11 (Parkwise AI)** adds a Python live dashboard (`dashboard.py`) that reads
+> CSV telemetry over serial — see the project folder for setup instructions.
 
 ## How to run a project
 
