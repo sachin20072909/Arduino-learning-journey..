@@ -6,6 +6,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.dml import MSO_THEME_COLOR
 from pptx.enum.shapes import PP_PLACEHOLDER
 from pathlib import Path
+from PIL import Image
 import math
 
 # -----------------------------------------------------------------------------
@@ -40,6 +41,10 @@ PURPLE = "B796FF"
 
 FONT = "Aptos"
 FONT_DISPLAY = "Aptos Display"
+ASSET_DIR = Path(__file__).resolve().parent / "assets"
+HERO_IMAGE = ASSET_DIR / "hero_robot_pipeline.png"
+LEAK_IMAGE = ASSET_DIR / "pipeline_leak_acoustic.png"
+ROBOT_IMAGE = ASSET_DIR / "inspection_robot_closeup.png"
 
 
 def rgb(hexstr):
@@ -162,6 +167,24 @@ def chevron(slide, x, y, w=0.22, h=0.22, color=CYAN):
 
 def label(slide, x, y, value, color=MUTED_2, size=7.5, w=2.5):
     return text(slide, x, y, w, 0.18, value.upper(), size=size, color=color, bold=True, tracking=0.2)
+
+
+def picture_cover(slide, path, x, y, w, h):
+    """Place a picture in a frame without distorting its aspect ratio."""
+    with Image.open(path) as im:
+        iw, ih = im.size
+    target = w / h
+    aspect = iw / ih
+    pic = slide.shapes.add_picture(str(path), Inches(x), Inches(y), Inches(w), Inches(h))
+    if aspect > target:
+        crop = (1.0 - target / aspect) / 2.0
+        pic.crop_left = crop
+        pic.crop_right = crop
+    elif aspect < target:
+        crop = (1.0 - aspect / target) / 2.0
+        pic.crop_top = crop
+        pic.crop_bottom = crop
+    return pic
 
 
 def slide_bg(slide, kicker, title, subtitle=None, number=None, accent=CYAN):
@@ -459,40 +482,14 @@ text(slide, 0.68, 5.28, 5.5, 0.48, "A practical, scalable way to turn robot patr
 text(slide, 0.68, 6.55, 4.0, 0.24, "PROBLEM → GAP → SOLUTION → PROOF → SCALE", size=8.0, color=MUTED_2, bold=True, margin=0.0)
 # cover visual right: pipeline + robot + signal halo
 rect(slide, 6.70, 1.02, 5.92, 5.55, PANEL, radius=True, line=GRID, lw=0.9)
-# perspective grid in visual panel
-for i in range(6):
-    line(slide, 6.90, 5.86-i*0.54, 12.38, 5.86-i*0.54, GRID, 0.45)
-for i in range(8):
-    line(slide, 7.02+i*0.72, 1.30, 6.98+i*0.72, 6.14, GRID, 0.35)
-# pipeline
-line(slide, 7.36, 2.30, 11.82, 2.30, BLUE, 3.2)
-line(slide, 7.36, 2.47, 11.82, 2.47, BLUE, 1.0)
-for xx in [8.22, 9.19, 10.15, 11.10]:
-    line(slide, xx, 2.19, xx, 2.58, BLUE, 1.0)
-# pipe labels
-pill(slide, 7.25, 1.56, 1.42, "P-03 / ROUTE B", PANEL_2, BLUE, size=7.0)
-text(slide, 10.08, 1.63, 2.2, 0.18, "COMPRESSED-AIR HEADER", size=7.2, color=MUTED, bold=True, align=PP_ALIGN.RIGHT, margin=0.0)
-# leak locus with rings and jets
-ellipse(slide, 10.34, 1.97, 0.72, 0.72, BG, line=AMBER, lw=0.8, transparency=25)
-ellipse(slide, 10.48, 2.11, 0.44, 0.44, BG, line=AMBER, lw=1.0, transparency=10)
-dot(slide, 10.64, 2.27, 0.12, AMBER)
-for xx, yy in [(10.64,2.08),(10.51,1.96),(10.77,1.95)]: line(slide, 10.70, 2.28, xx, yy, AMBER, 1.6)
-text(slide, 10.25, 3.03, 0.95, 0.18, "LEAK EVENT", size=7.0, color=AMBER, bold=True, align=PP_ALIGN.CENTER, margin=0.0)
-# route track
-pts = [(7.18,5.22),(7.80,4.65),(8.62,5.08),(9.38,4.28),(10.26,4.77),(11.18,4.12),(12.06,4.63)]
-for (x1,y1),(x2,y2) in zip(pts[:-1],pts[1:]): line(slide, x1,y1,x2,y2, GRID, 2.8)
-for (x1,y1),(x2,y2) in zip(pts[:4],pts[1:4]): line(slide,x1,y1,x2,y2,CYAN,3.0)
-for xx,yy in pts: dot(slide,xx-0.05,yy-0.05,0.10,CYAN if xx<9.5 else GRID)
-# robot
-icon_robot(slide, 8.78, 4.30, 1.45, CYAN, AMBER)
-# sensor pulse from robot to pipe
-for r, tr in [(0.72,75),(1.18,87),(1.65,93)]:
-    ellipse(slide, 9.37-r/2, 3.15-r/2, r, r, BG, line=AMBER, lw=0.8, transparency=tr)
-icon_signal(slide, 9.12, 3.54, 0.48, AMBER)
-# live labels
-pill(slide, 7.24, 5.92, 1.18, "PATROL ONLINE", "14313A", CYAN, line_color=CYAN_DARK, size=6.6)
-pill(slide, 11.08, 5.92, 1.10, "SENSE / SCORE", "352B1F", AMBER, line_color=AMBER, size=6.6)
-text(slide, 6.98, 6.32, 5.3, 0.18, "A route-aware robot for automated periodic inspection", size=8.2, color=MUTED, align=PP_ALIGN.CENTER, margin=0.0)
+# generated hero image: the robot and leak relationship is immediately legible
+picture_cover(slide, HERO_IMAGE, 6.70, 1.02, 5.92, 5.55)
+# restrained overlays keep the image premium while preserving the visual story
+rect(slide, 6.70, 5.76, 5.92, 0.81, BG, radius=False, transparency=22)
+pill(slide, 7.02, 5.94, 1.28, "PATROL ONLINE", "14313A", CYAN, line_color=CYAN_DARK, size=6.6)
+pill(slide, 11.02, 5.94, 1.28, "ACOUSTIC EVENT", "352B1F", AMBER, line_color=AMBER, size=6.4)
+text(slide, 7.03, 6.37, 5.25, 0.18, "A route-aware robot for automated periodic inspection", size=8.2, color=WHITE, align=PP_ALIGN.CENTER, margin=0.0)
+label(slide, 7.03, 1.34, "LIVE VISUAL CONCEPT", CYAN, 7.0, 2.3)
 add_notes(slide, "Open by reframing the project. This is not a line-following robot looking for a clever demo; it is an automated industrial leak-intelligence workflow. The robot patrols a predefined route, senses acoustic signatures locally, and returns a maintenance-ready record with approximate location and priority. We will show a realistic MVP boundary first, then the path to scale. The promise is simple: turn manual leak hunting into repeatable, actionable inspection data.")
 
 # -----------------------------------------------------------------------------
@@ -544,6 +541,11 @@ for i,lab in enumerate(["MOTORS","VALVES","FANS","PEOPLE"]):
 # noise annotation
 line(slide,10.10,2.80,10.10,2.10,RED,0.8)
 text(slide,10.26,2.02,1.90,0.34,"INDUSTRIAL NOISE\ncan mask the signature",size=8.0,color=RED,bold=True,margin=0.0)
+# photographic anchor: a leak event makes the problem tangible
+picture_cover(slide, LEAK_IMAGE, 4.43, 2.26, 7.98, 2.92)
+rect(slide, 4.43, 2.26, 7.98, 0.46, BG, radius=False, transparency=28)
+pill(slide, 4.70, 2.37, 1.20, "LEAK EVENT", "352B1F", AMBER, line_color=AMBER, size=6.7)
+text(slide, 10.00, 2.39, 2.02, 0.16, "ULTRASONIC SIGNATURE", size=6.8, color=AMBER, bold=True, align=PP_ALIGN.RIGHT, margin=0.0)
 # bottom three impact cards
 for x,head,body,accent in [(4.78,"HARD TO DETECT","Subtle leaks compete with plant noise.",RED),(7.34,"HARD TO REPEAT","Inspection depends on people and availability.",BLUE),(9.90,"HARD TO PRIORITIZE","A finding without context slows action.",AMBER)]:
     rect(slide,x,5.58,2.32,0.67,PANEL_2,radius=True,line=GRID,lw=0.6)
@@ -653,6 +655,10 @@ slide_bg(slide, "04  /  SYSTEM DESIGN", "A compact robot closes the loop.", "Sen
 rect(slide,0.66,1.62,5.36,4.94,PANEL,radius=True,line=GRID,lw=0.8)
 label(slide,0.94,1.90,"MOBILE INSPECTION NODE",MUTED_2,7.4,3.0)
 draw_robot_diagram(slide,1.02,2.23,1.18)
+# small photographic inset grounds the system diagram in a believable form factor
+rect(slide,4.44,4.78,1.22,1.34,PANEL_2,radius=True,line=GRID,lw=0.7)
+picture_cover(slide, ROBOT_IMAGE, 4.50, 4.84, 1.10, 1.10)
+label(slide,4.52,6.00,"FORM FACTOR",AMBER,5.8,1.04)
 # right components
 text(slide,6.39,1.80,4.0,0.24,"System blocks",size=13.5,color=WHITE,bold=True,font=FONT_DISPLAY,margin=0.0)
 text(slide,6.40,2.15,5.5,0.38,"Each block has a clear role in the MVP — no hidden magic.",size=9.4,color=MUTED,margin=0.0)
