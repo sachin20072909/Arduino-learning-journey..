@@ -3,7 +3,18 @@
 Browser-based phishing detector with **on-device machine learning**.  
 12-slide product pitch for a **5–7 minute** judging session.
 
-## Present
+## Upload this file (PowerPoint / Google Slides)
+
+**File:** `PhishGuard-Hackathon-Pitch.pptx`  
+Widescreen **16:9** · 12 editable slides · dark cybersecurity theme.
+
+- **Google Slides:** Drive → New → File upload, or Slides → File → Import slides  
+- **PowerPoint on the web:** Office.com → Upload → Open in PowerPoint  
+- **Devfolio / Unstop / hackathon portals:** upload the `.pptx` directly  
+
+After upload, replace the placeholders: `[Team Name]`, members, `[Hackathon Name]`, GitHub, email.
+
+## Live HTML preview (optional)
 
 1. Open `presentation/index.html` in Chrome (or start the local preview server).
 2. Press **F11** (or the browser fullscreen control) for pitch mode.
