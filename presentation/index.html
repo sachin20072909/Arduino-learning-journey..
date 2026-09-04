@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhishGuard — On-Device Phishing Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #060910;
+      --bg-elev: #0c1220;
+      --card: rgba(12, 18, 32, 0.78);
+      --line: rgba(103, 232, 249, 0.16);
+      --line-strong: rgba(34, 211, 238, 0.45);
+      --cyan: #22d3ee;
+      --cyan-soft: #67e8f9;
+      --blue: #60a5fa;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --dim: #64748b;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #fb7185;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: Outfit, system-ui, sans-serif; overflow: hidden; }
+    button { font-family: inherit; }
+
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background:
+        radial-gradient(900px 500px at 12% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+        radial-gradient(700px 420px at 100% 110%, rgba(37, 99, 235, 0.16), transparent 50%),
+        linear-gradient(180deg, #070b14 0%, #05070d 100%);
+    }
+    .stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+      pointer-events: none;
+    }
+
+    .progress {
+      position: absolute;
+      top: 0; left: 0; height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--blue));
+      width: 8.33%;
+      z-index: 40;
+      transition: width 0.35s ease;
+      box-shadow: 0 0 16px rgba(34, 211, 238, 0.5);
+    }
+
+    .chrome-bar {
+      position: absolute;
+      top: 18px; left: 28px; right: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 30;
+      pointer-events: none;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--muted); font-weight: 600;
+    }
+    .brand-mark {
+      width: 22px; height: 22px; border-radius: 7px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, rgba(34,211,238,0.2), rgba(37,99,235,0.25));
+      border: 1px solid var(--line-strong);
+      color: var(--cyan);
+    }
+    .meta { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--dim); }
+
+    .slides { position: relative; width: 100%; height: 100%; }
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 88px 72px 80px;
+      opacity: 0; visibility: hidden;
+      transform: translateY(18px);
+      transition: opacity 0.38s ease, transform 0.38s ease, visibility 0.38s;
+    }
+    .slide.active { opacity: 1; visibility: visible; transform: none; }
+
+    h1, h2 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.08; }
+    h1 { font-size: clamp(40px, 4.6vw, 64px); }
+    h2 { font-size: clamp(32px, 3.4vw, 48px); max-width: 16ch; }
+    .kicker {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--cyan); margin-bottom: 14px; font-weight: 500;
+    }
+    .lede { color: var(--muted); font-size: 18px; line-height: 1.5; max-width: 52ch; margin-top: 14px; }
+    .highlight {
+      display: inline-block; margin-top: 22px; padding: 12px 16px;
+      border: 1px solid var(--line-strong);
+      background: rgba(34, 211, 238, 0.08);
+      border-radius: 12px; color: var(--cyan-soft); font-weight: 500;
+    }
+
+    .row { display: flex; gap: 28px; align-items: center; }
+    .grow { flex: 1; min-width: 0; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px 18px 16px;
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+    .card h3 { font-size: 16px; margin-bottom: 6px; }
+    .card p, .card li { color: var(--muted); font-size: 14.5px; line-height: 1.45; }
+    .card ul { list-style: none; display: grid; gap: 8px; }
+    .card li { display: flex; gap: 8px; align-items: flex-start; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); margin-top: 7px; flex: none; }
+
+    .icon-chip {
+      width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+      background: rgba(34, 211, 238, 0.1); color: var(--cyan); margin-bottom: 10px;
+      border: 1px solid var(--line);
+    }
+
+    .pills { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 999px;
+      border: 1px solid var(--line); font-size: 14px; font-weight: 600;
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 22px; }
+    .node {
+      padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+      background: rgba(15,23,42,0.7); font-size: 13px; font-weight: 600; text-align: center;
+      min-width: 110px;
+    }
+    .node small { display: block; color: var(--dim); font-weight: 400; font-size: 11px; margin-top: 3px; }
+    .arrow { color: var(--cyan); font-size: 18px; opacity: 0.8; }
+
+    .browser {
+      width: 100%; max-width: 460px;
+      border-radius: 16px; border: 1px solid var(--line-strong);
+      background: #0b1220; overflow: hidden; box-shadow: 0 30px 80px rgba(2,6,23,0.65);
+    }
+    .browser-top {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      background: #111827; border-bottom: 1px solid var(--line);
+    }
+    .dots span { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .d1 { background: #fb7185; } .d2 { background: #fbbf24; } .d3 { background: #34d399; }
+    .urlbar {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      background: #0b1220; border: 1px solid var(--line); border-radius: 8px;
+      padding: 6px 10px; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted);
+    }
+    .lock { color: var(--red); }
+    .browser-body { padding: 18px; }
+    .fake-bank { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .fake-bank strong { font-size: 15px; }
+    .form-line { height: 32px; border-radius: 8px; background: #111827; border: 1px solid var(--line); margin-bottom: 8px; }
+    .alert {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+      background: rgba(251, 113, 133, 0.12); border: 1px solid rgba(251,113,133,0.35);
+      color: #fecdd3; font-size: 13px; font-weight: 600;
+    }
+
+    .popup {
+      width: 320px; border-radius: 18px; border: 1px solid var(--line-strong);
+      background: linear-gradient(180deg, #101826, #0b1220);
+      padding: 16px; box-shadow: var(--shadow);
+    }
+    .popup-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .score { font-family: "IBM Plex Mono", monospace; font-size: 28px; color: var(--red); font-weight: 600; }
+    .bar { height: 8px; background: #1e293b; border-radius: 99px; overflow: hidden; margin: 8px 0 14px; }
+    .bar > span { display: block; height: 100%; width: 94%; background: linear-gradient(90deg, #f59e0b, #fb7185); }
+
+    .arch {
+      display: grid; gap: 10px; justify-items: center; margin-top: 8px;
+    }
+    .arch-box {
+      min-width: 280px; text-align: center; padding: 10px 16px; border-radius: 12px;
+      border: 1px solid var(--line); background: rgba(15,23,42,0.75); font-weight: 600; font-size: 14px;
+    }
+    .arch-box.accent { border-color: var(--line-strong); color: var(--cyan-soft); background: rgba(34,211,238,0.08); }
+    .split { display: flex; gap: 18px; align-items: stretch; }
+    .vline { width: 1px; background: linear-gradient(transparent, var(--cyan), transparent); }
+
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .bad { border-color: rgba(251,113,133,0.28); }
+    .good { border-color: rgba(52,211,153,0.35); }
+    .chain { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+    .chip { font-size: 12px; padding: 6px 8px; border-radius: 8px; background: #111827; border: 1px solid var(--line); color: var(--muted); }
+
+    .metric { text-align: left; }
+    .metric .num { font-size: 22px; color: var(--cyan-soft); font-weight: 700; margin: 6px 0 4px; }
+    .note {
+      margin-top: 16px; color: var(--muted); font-size: 14px;
+      padding: 12px 14px; border-left: 3px solid var(--cyan); background: rgba(34,211,238,0.06); border-radius: 0 10px 10px 0;
+    }
+
+    .status { display: flex; flex-direction: column; gap: 10px; }
+    .status-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(15,23,42,0.6); }
+    .badge { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; padding: 4px 8px; border-radius: 999px; }
+    .b-safe { background: rgba(52,211,153,0.15); color: var(--green); }
+    .b-sus { background: rgba(251,191,36,0.15); color: var(--yellow); }
+    .b-phish { background: rgba(251,113,133,0.15); color: var(--red); }
+
+    .closing { text-align: center; align-items: center; }
+    .closing h2 { max-width: none; }
+    .big3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: min(980px, 100%); margin: 28px auto 0; text-align: left; }
+    .thanks { margin-top: 28px; font-size: 42px; font-weight: 800; letter-spacing: -0.04em; }
+    .q { color: var(--cyan); font-size: 20px; margin-top: 6px; }
+
+    .nav {
+      position: absolute; bottom: 22px; left: 28px; right: 28px;
+      display: flex; justify-content: space-between; align-items: center; z-index: 30;
+    }
+    .nav-btn {
+      width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
+      background: rgba(15,23,42,0.7); color: var(--text); cursor: pointer;
+    }
+    .nav-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+    .dots-nav { display: flex; gap: 7px; }
+    .dots-nav button {
+      width: 8px; height: 8px; border-radius: 99px; border: 0; background: #334155; cursor: pointer;
+    }
+    .dots-nav button.on { width: 22px; background: var(--cyan); }
+
+    .shield {
+      width: 72px; height: 80px; margin-bottom: 10px;
+      filter: drop-shadow(0 0 18px rgba(34,211,238,0.35));
+    }
+    .title-visual { position: relative; }
+    .scan {
+      position: absolute; left: 18px; right: 18px; height: 2px; background: var(--cyan);
+      top: 70px; opacity: 0.7; animation: scan 2.8s ease-in-out infinite;
+      box-shadow: 0 0 12px var(--cyan);
+    }
+    @keyframes scan { 0% { top: 58px; opacity: 0; } 15% { opacity: 0.8; } 85% { opacity: 0.8; } 100% { top: 210px; opacity: 0; } }
+
+    .two-col { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 36px; align-items: center; }
+    .feat-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; color: var(--muted); font-size: 15px; }
+    .feat-item b { color: var(--text); font-weight: 500; }
+    .tiny { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+
+    @media (max-width: 980px) {
+      .slide { padding: 76px 24px 80px; }
+      .two-col, .compare, .grid-2, .grid-4, .grid-5, .big3 { grid-template-columns: 1fr; }
+      h1 { font-size: 34px; } h2 { font-size: 28px; max-width: none; }
+      .row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="progress" id="progress"></div>
+    <div class="chrome-bar">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v6c0 5-3.4 8.4-8 9.5C7.4 20.4 4 17 4 12V6l8-3z" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 12.2l2.2 2.2 4.8-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        PhishGuard · On-Device ML
+      </div>
+      <div class="meta" id="counter">01 / 12</div>
+    </div>
+
+    <div class="slides" id="slides">
+
+      <!-- 1 -->
+      <section class="slide active">
+        <div class="two-col">
+          <div>
+            <div class="kicker">Hackathon pitch · Privacy-first web security</div>
+            <h1>Browser-Based<br>Phishing Detector</h1>
+            <p class="lede">On-device machine learning for real-time web security. Detect phishing websites without sending user data to the cloud.</p>
+            <div class="pills" style="margin-top:22px">
+              <span class="pill">On-device ML</span>
+              <span class="pill">Real-time</span>
+              <span class="pill">Privacy-first</span>
+              <span class="pill">Lightweight</span>
+            </div>
+            <div style="margin-top:28px; display:flex; gap:28px; color:var(--muted); font-size:14px;">
+              <div><div class="tiny">Team</div>[Team Name]</div>
+              <div><div class="tiny">Members</div>[Member 1] · [Member 2] · [Member 3]</div>
+              <div><div class="tiny">Event</div>[Hackathon Name]</div>
+            </div>
+          </div>
+          <div class="title-visual">
+            <div class="browser">
+              <div class="browser-top">
+                <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+                <div class="urlbar"><span class="lock">⚠</span> http://paypa1-secure-login.xyz/auth</div>
+              </div>
+              <div class="browser-body" style="position:relative">
+                <div class="scan"></div>
+                <div class="fake-bank">
+                  <strong>Paypa1 Secure Login</strong>
+                  <svg class="shield" viewBox="0 0 64 72" width="48" height="54" style="margin:0">
+                    <defs>
+                      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#3b82f6"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M32 4l24 9v18c0 15-10 25-24 29C18 56 8 46 8 31V13l24-9z" fill="rgba(8,15,28,0.9)" stroke="url(#g)" stroke-width="2"/>
+                    <circle cx="32" cy="30" r="8" stroke="#67e8f9" stroke-width="1.5"/>
+                    <circle cx="32" cy="30" r="3" fill="#22d3ee"/>
+                    <path d="M32 22v-4M32 42v-4M24 30h-4M44 30h-4" stroke="#67e8f9" stroke-width="1.4"/>
+                  </svg>
+                </div>
+                <div class="form-line"></div>
+                <div class="form-line"></div>
+                <div class="alert">AI verdict · Likely phishing · Analyzed locally</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section class="slide">
+        <div class="kicker">The problem</div>
+        <h2>One Click Can Expose Everything.</h2>
+        <div class="two-col" style="margin-top:28px; align-items:start">
+          <div>
+            <div class="grid-2">
+              <div class="card"><div class="icon-chip">◎</div><h3>Convincing fakes</h3><p>Phishing sites imitate banks, email, and cloud logins you already trust.</p></div>
+              <div class="card"><div class="icon-chip">⚿</div><h3>High-value theft</h3><p>One form submit can leak passwords, cards, and personal details.</p></div>
+              <div class="card"><div class="icon-chip">☁</div><h3>Cloud trade-offs</h3><p>Many detectors send URLs or page data to remote servers.</p></div>
+              <div class="card"><div class="icon-chip">⚡</div><h3>No time to wait</h3><p>A warning must appear before the user hits “Sign in”.</p></div>
+            </div>
+            <div class="highlight">How can we detect phishing in real time while keeping user data on the device?</div>
+          </div>
+          <div class="card" style="padding:22px">
+            <div class="tiny">Attack path</div>
+            <div class="arch">
+              <div class="arch-box">User clicks a link</div>
+              <div class="arrow">↓</div>
+              <div class="arch-box">Looks like a trusted site</div>
+              <div class="arrow">↓</div>
+              <div class="arch-box">Password / banking details entered</div>
+              <div class="arrow">↓</div>
+              <div class="arch-box accent" style="border-color:rgba(251,113,133,.45);color:#fecdd3;background:rgba(251,113,133,.08)">Credentials stolen</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section class="slide">
+        <div class="kicker">Our solution</div>
+        <h2>Phishing Detection, Directly Inside the Browser.</h2>
+        <p class="lede">A Chrome extension that scores the current page locally — then shows a clear, human verdict.</p>
+        <div class="flow">
+          <div class="node">Website<small>Current tab</small></div><div class="arrow">→</div>
+          <div class="node">Feature extraction<small>URL + page signals</small></div><div class="arrow">→</div>
+          <div class="node accent" style="border-color:var(--line-strong);color:var(--cyan-soft)">On-device ML<small>No cloud inference</small></div><div class="arrow">→</div>
+          <div class="node">Risk score<small>0–100%</small></div><div class="arrow">→</div>
+          <div class="node">Verdict<small>Safe / Suspicious / Phishing</small></div>
+        </div>
+        <div class="pills" style="margin:22px 0 18px">
+          <span class="pill"><span style="color:var(--green)">●</span> Safe</span>
+          <span class="pill"><span style="color:var(--yellow)">●</span> Suspicious</span>
+          <span class="pill"><span style="color:var(--red)">●</span> Likely Phishing</span>
+        </div>
+        <div class="grid-5">
+          <div class="card"><h3>Local</h3><p>Runs on the user’s device.</p></div>
+          <div class="card"><h3>Private</h3><p>No page data required in the cloud.</p></div>
+          <div class="card"><h3>Real-time</h3><p>Scores the page as it loads.</p></div>
+          <div class="card"><h3>Lightweight</h3><p>Compact model for the browser.</p></div>
+          <div class="card"><h3>Transparent</h3><p>Shows the signals behind the call.</p></div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section class="slide">
+        <div class="kicker">Architecture</div>
+        <h2>From URL to Verdict in Milliseconds</h2>
+        <p class="lede">Every step — extraction, scoring, and the final warning — happens inside the browser. Nothing is required to leave the device for inference.</p>
+        <div class="card" style="margin-top:22px; padding:24px">
+          <div class="flow" style="justify-content:center; margin-top:0">
+            <div class="node">Chrome browser</div>
+            <div class="arrow">→</div>
+            <div class="node">Extension</div>
+            <div class="arrow">→</div>
+            <div class="node" style="border-color:var(--line-strong);color:var(--cyan-soft)">Feature extraction</div>
+          </div>
+          <div class="split" style="width:100%; margin:16px 0; justify-content:center">
+            <div class="arch-box grow">URL features<small style="display:block;color:var(--dim);font-weight:400;margin-top:4px">Host, path, TLD, lookalikes</small></div>
+            <div class="arch-box grow">Page content features<small style="display:block;color:var(--dim);font-weight:400;margin-top:4px">Forms, HTTPS, iframes, brand mismatch</small></div>
+          </div>
+          <div class="flow" style="justify-content:center; margin-top:0">
+            <div class="node">30–40 engineered features</div>
+            <div class="arrow">→</div>
+            <div class="node" style="border-color:var(--line-strong);color:var(--cyan-soft)">On-device ML model</div>
+            <div class="arrow">→</div>
+            <div class="node">Phishing probability</div>
+          </div>
+          <div class="split" style="width:100%; margin-top:16px">
+            <div class="arch-box grow" style="color:var(--green)">Safe</div>
+            <div class="arch-box grow" style="color:var(--yellow)">Suspicious</div>
+            <div class="arch-box grow" style="color:var(--red)">Likely phishing</div>
+          </div>
+          <p style="text-align:center;color:var(--dim);margin-top:16px;font-size:13px;font-family:'IBM Plex Mono',monospace">ALL INFERENCE RUNS LOCALLY · NO CLOUD ROUND-TRIP REQUIRED</p>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section class="slide">
+        <div class="kicker">Signals</div>
+        <h2>30–40 Signals Behind Every Decision</h2>
+        <div class="grid-2" style="margin-top:26px">
+          <div class="card">
+            <div class="tiny">URL-based features</div>
+            <h3 style="margin-bottom:12px">What the address reveals</h3>
+            <div class="feat-item"><span class="dot"></span><span><b>Length & structure</b> — unusually long or nested paths</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>Subdomains & TLDs</b> — extra hosts, uncommon endings</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>Special characters</b> — @, //, encoded tricks</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>IP instead of domain</b> — numeric hosts</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>Typosquatting</b> — lookalike brand spellings</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>Brand similarity</b> — close to known names</span></div>
+          </div>
+          <div class="card">
+            <div class="tiny">Page content features</div>
+            <h3 style="margin-bottom:12px">What the page is asking for</h3>
+            <div class="feat-item"><span class="dot"></span><span><b>Login forms</b> — password and credential fields</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>Harvesting cues</b> — urgent “verify account” patterns</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>HTTP / non-secure</b> — sensitive forms without TLS</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>Iframes</b> — hidden or nested inputs</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>Brand mismatch</b> — page claims ≠ actual host</span></div>
+            <div class="feat-item"><span class="dot"></span><span><b>Form behavior</b> — odd destinations and actions</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section class="slide">
+        <div class="kicker">Machine learning · model-selection stage</div>
+        <h2>Small Model. Fast Decision.</h2>
+        <p class="lede">The model is trained offline, then shipped with the extension. Inference stays on-device. Final architecture is still being selected.</p>
+        <div class="grid-2" style="margin-top:22px">
+          <div class="card">
+            <div class="tiny">Candidate A</div>
+            <h3>Gradient-boosted decision tree</h3>
+            <ul>
+              <li><span class="dot"></span>Strong on tabular URL/page features</li>
+              <li><span class="dot"></span>Compact after training</li>
+              <li><span class="dot"></span>Easier to inspect which signals matter</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="tiny">Candidate B</div>
+            <h3>Compact neural network</h3>
+            <ul>
+              <li><span class="dot"></span>Small enough for browser runtimes</li>
+              <li><span class="dot"></span>Fast forward-pass on CPU</li>
+              <li><span class="dot"></span>Fits ONNX / TF.js-style export</li>
+            </ul>
+          </div>
+        </div>
+        <div class="flow">
+          <div class="node">30–40 features</div><div class="arrow">→</div>
+          <div class="node accent" style="border-color:var(--line-strong);color:var(--cyan-soft)">Selected compact model</div><div class="arrow">→</div>
+          <div class="node">Probability score</div><div class="arrow">→</div>
+          <div class="node">Thresholds → verdict</div>
+        </div>
+        <div class="pills">
+          <span class="pill">Trained offline</span>
+          <span class="pill">No cloud inference</span>
+          <span class="pill">Built for low latency</span>
+          <span class="pill">Feature-based = explainable</span>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section class="slide">
+        <div class="kicker">Privacy by design</div>
+        <h2>Your Data Stays on Your Device.</h2>
+        <div class="compare" style="margin-top:26px">
+          <div class="card bad">
+            <div class="tiny" style="color:var(--red)">Traditional cloud detection</div>
+            <h3>Page data leaves the browser</h3>
+            <div class="chain">
+              <span class="chip">User</span><span class="arrow">→</span>
+              <span class="chip">Website info</span><span class="arrow">→</span>
+              <span class="chip">Cloud server</span><span class="arrow">→</span>
+              <span class="chip">Detection</span><span class="arrow">→</span>
+              <span class="chip">Result</span>
+            </div>
+            <ul style="margin-top:16px">
+              <li><span class="dot" style="background:var(--red)"></span>URLs and content may be uploaded</li>
+              <li><span class="dot" style="background:var(--red)"></span>Needs a live network round-trip</li>
+              <li><span class="dot" style="background:var(--red)"></span>Privacy depends on a third party</li>
+            </ul>
+          </div>
+          <div class="card good">
+            <div class="tiny" style="color:var(--green)">Our approach</div>
+            <h3>Inference never needs the cloud</h3>
+            <div class="chain">
+              <span class="chip">User</span><span class="arrow">→</span>
+              <span class="chip">Website info</span><span class="arrow">→</span>
+              <span class="chip" style="color:var(--cyan-soft);border-color:var(--line-strong)">Local ML model</span><span class="arrow">→</span>
+              <span class="chip">Result</span>
+            </div>
+            <ul style="margin-top:16px">
+              <li><span class="dot" style="background:var(--green)"></span>No URL required for inference</li>
+              <li><span class="dot" style="background:var(--green)"></span>No webpage content uploaded</li>
+              <li><span class="dot" style="background:var(--green)"></span>Works with weaker connectivity</li>
+              <li><span class="dot" style="background:var(--green)"></span>Faster local decision-making</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section class="slide">
+        <div class="kicker">User experience · example UI</div>
+        <h2>What the User Sees</h2>
+        <div class="two-col" style="margin-top:20px">
+          <div class="popup">
+            <div class="popup-head">
+              <div class="brand" style="pointer-events:auto"><div class="brand-mark" style="width:20px;height:20px">🛡</div> PhishGuard</div>
+              <span class="badge b-phish">LIVE EXAMPLE</span>
+            </div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:8px">http://paypa1-secure-login.xyz</div>
+            <div style="font-weight:800;letter-spacing:.04em;color:var(--red)">⚠ LIKELY PHISHING</div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+              <span class="tiny" style="margin:0">Risk score</span><span class="score">94%</span>
+            </div>
+            <div class="bar"><span></span></div>
+            <div class="tiny">Why this page</div>
+            <ul>
+              <li><span class="dot" style="background:var(--red)"></span>Suspicious URL structure</li>
+              <li><span class="dot" style="background:var(--red)"></span>Brand similarity detected</li>
+              <li><span class="dot" style="background:var(--red)"></span>Credential form found</li>
+              <li><span class="dot" style="background:var(--red)"></span>Non-secure connection</li>
+            </ul>
+          </div>
+          <div class="status">
+            <p class="lede" style="margin:0 0 8px">Simple language. One glance. Built for non-technical users.</p>
+            <div class="status-item"><span class="badge b-safe">SAFE</span><div><strong>Low risk</strong><div style="color:var(--muted);font-size:14px">Looks consistent with a legitimate site.</div></div></div>
+            <div class="status-item"><span class="badge b-sus">SUSPICIOUS</span><div><strong>Review carefully</strong><div style="color:var(--muted);font-size:14px">Some signals don’t add up — pause before you sign in.</div></div></div>
+            <div class="status-item"><span class="badge b-phish">LIKELY PHISHING</span><div><strong>Avoid this site</strong><div style="color:var(--muted);font-size:14px">Do not enter passwords or payment details.</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section class="slide">
+        <div class="kicker">Evaluation · targets, not claimed results</div>
+        <h2>We Measure What Actually Matters.</h2>
+        <div class="grid-5" style="margin-top:26px">
+          <div class="card metric"><div class="tiny">Precision</div><div class="num">Target</div><p>Of flagged sites, how many were truly phishing?</p></div>
+          <div class="card metric"><div class="tiny">Recall</div><div class="num">Priority</div><p>Of real phishing sites, how many did we catch?</p></div>
+          <div class="card metric"><div class="tiny">F1 score</div><div class="num">Balance</div><p>Single view of precision and recall together.</p></div>
+          <div class="card metric"><div class="tiny">Latency</div><div class="num">ms-class</div><p>Time from page load to on-device verdict.</p></div>
+          <div class="card metric"><div class="tiny">Model size</div><div class="num">Compact</div><p>Small enough to ship inside the extension.</p></div>
+        </div>
+        <div class="note"><strong style="color:var(--text)">Recall is the safety metric.</strong> A missed phishing page (false negative) can expose a password. We will tune thresholds to catch attacks first, then reduce false alarms.</div>
+        <div class="pills">
+          <span class="pill">Target detection quality: 95%+</span>
+          <span class="pill">Not yet experimentally verified</span>
+          <span class="pill">Held-out test set planned</span>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section class="slide">
+        <div class="kicker">Data · planned public sources</div>
+        <h2>Built and Tested Against Real-World Data</h2>
+        <div class="grid-3" style="margin-top:22px">
+          <div class="card"><div class="tiny">Phishing</div><h3>PhishTank</h3><p>Community-verified phishing URLs as malicious examples.</p></div>
+          <div class="card"><div class="tiny">Phishing</div><h3>OpenPhish</h3><p>Additional live phishing feeds for coverage and freshness.</p></div>
+          <div class="card"><div class="tiny">Benign</div><h3>Tranco</h3><p>Popular legitimate sites as the safe class.</p></div>
+        </div>
+        <div class="flow">
+          <div class="node">Dataset</div><div class="arrow">→</div>
+          <div class="node">Feature extraction</div><div class="arrow">→</div>
+          <div class="node">Train / test split</div><div class="arrow">→</div>
+          <div class="node">Model training</div><div class="arrow">→</div>
+          <div class="node accent" style="border-color:var(--line-strong);color:var(--cyan-soft)">Held-out evaluation</div>
+        </div>
+        <div class="grid-2" style="margin-top:16px">
+          <div class="card"><h3>Consistent features</h3><p>The same 30–40 signals are computed for every URL and page snapshot.</p></div>
+          <div class="card"><h3>Generalization first</h3><p>We score the held-out set — not training accuracy — so results reflect new sites.</p></div>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section class="slide">
+        <div class="kicker">Honesty &amp; roadmap</div>
+        <h2>Honest About the Gaps. Ready to Improve.</h2>
+        <div class="grid-2" style="margin-top:26px">
+          <div class="card">
+            <div class="tiny">Current limitations</div>
+            <div class="feat-item"><span class="dot" style="background:var(--yellow)"></span><span>No reliable live domain-age check without an external service</span></div>
+            <div class="feat-item"><span class="dot" style="background:var(--yellow)"></span><span>Focused on web-based phishing, not every scam channel</span></div>
+            <div class="feat-item"><span class="dot" style="background:var(--yellow)"></span><span>Advanced attacks can still evade feature-based models</span></div>
+            <div class="feat-item"><span class="dot" style="background:var(--yellow)"></span><span>Dynamic pages may change after the first analysis</span></div>
+            <div class="feat-item"><span class="dot" style="background:var(--yellow)"></span><span>False positives are possible</span></div>
+          </div>
+          <div class="card">
+            <div class="tiny">Future improvements</div>
+            <div class="feat-item"><span class="dot"></span><span>Deeper behavioral analysis after load</span></div>
+            <div class="feat-item"><span class="dot"></span><span>Stronger typosquatting detection</span></div>
+            <div class="feat-item"><span class="dot"></span><span>Optional reputation lists (user-controlled)</span></div>
+            <div class="feat-item"><span class="dot"></span><span>Continuous model updates</span></div>
+            <div class="feat-item"><span class="dot"></span><span>Richer social-engineering patterns · more browsers</span></div>
+          </div>
+        </div>
+        <div class="note">A hackathon-ready core: extract signals locally, score with a compact model, warn before submit. Extras stay optional so privacy remains the default.</div>
+      </section>
+
+      <!-- 12 -->
+      <section class="slide closing">
+        <div class="kicker">Impact</div>
+        <h2>Security Without Sacrificing Privacy.</h2>
+        <div class="big3">
+          <div class="card"><div class="tiny">Detect</div><h3>See it in time</h3><p>Spot suspicious phishing patterns in real time, in the tab the user is already on.</p></div>
+          <div class="card"><div class="tiny">Protect</div><h3>Warn before submit</h3><p>Give a clear Safe / Suspicious / Phishing call before sensitive data is entered.</p></div>
+          <div class="card"><div class="tiny">Preserve</div><h3>Keep it local</h3><p>Run detection and ML inference on the device — not on someone else’s server.</p></div>
+        </div>
+        <p class="highlight" style="margin-top:26px">Effective phishing detection doesn't have to mean sending user data to the cloud.</p>
+        <div class="thanks">Thank You</div>
+        <div class="q">Questions?</div>
+        <div style="margin-top:18px;color:var(--muted);font-size:14px">
+          [Team Name] · github.com/[your-team]/phishguard · [contact@email]
+        </div>
+      </section>
+    </div>
+
+    <div class="nav">
+      <button class="nav-btn" id="prev" aria-label="Previous">←</button>
+      <div class="dots-nav" id="dots"></div>
+      <button class="nav-btn" id="next" aria-label="Next">→</button>
+    </div>
+  </div>
+
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    const dotsWrap = document.getElementById("dots");
+    const progress = document.getElementById("progress");
+    const counter = document.getElementById("counter");
+    let i = 0;
+
+    slides.forEach((_, idx) => {
+      const b = document.createElement("button");
+      b.addEventListener("click", () => go(idx));
+      dotsWrap.appendChild(b);
+    });
+
+    function go(n) {
+      i = (n + slides.length) % slides.length;
+      slides.forEach((s, k) => s.classList.toggle("active", k === i));
+      [...dotsWrap.children].forEach((d, k) => d.classList.toggle("on", k === i));
+      progress.style.width = ((i + 1) / slides.length * 100) + "%";
+      counter.textContent = String(i + 1).padStart(2, "0") + " / " + String(slides.length).padStart(2, "0");
+    }
+
+    document.getElementById("prev").onclick = () => go(i - 1);
+    document.getElementById("next").onclick = () => go(i + 1);
+    document.addEventListener("keydown", (e) => {
+      if (["ArrowRight", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); go(i + 1); }
+      if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); go(i - 1); }
+      if (e.key === "Home") go(0);
+      if (e.key === "End") go(slides.length - 1);
+      if (e.key === "f" || e.key === "F") {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+    });
+    let tx = 0;
+    document.addEventListener("touchstart", (e) => tx = e.changedTouches[0].screenX, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].screenX - tx;
+      if (dx < -50) go(i + 1);
+      if (dx > 50) go(i - 1);
+    }, { passive: true });
+    go(0);
+  </script>
+</body>
+</html>
