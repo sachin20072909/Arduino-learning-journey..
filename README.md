@@ -22,6 +22,7 @@ comments in the code explaining the wiring and the concepts learned.
 | 09 | [Servo Motor Sweep](projects/09_Servo_Motor_Sweep) | Sweeps a servo 0°–180° | libraries, `Servo.h` |
 | 10 | [Knock Detector](projects/10_Knock_Detector) | LED lights when the desk is knocked | piezo as sensor, `millis()` |
 | 11 | [Parkwise AI Node](projects/11_Parkwise_AI_Node) | Smart parking bay: ultrasonic occupancy detection + status LEDs + servo boom barrier + buzzer guidance + serial telemetry | state machine, debounce, non-blocking `millis()`, CSV telemetry, Python dashboard |
+| 12 | [WiFiSense](projects/12_WiFiSense) | Hackathon pitch deck: privacy-preserving human activity detection from WiFi CSI using 2–3 ESP32 boards — no camera, no wearables | WiFi CSI sensing, ML pipeline design, false-positive rejection, deck built with `python-pptx` |
 
 ## Parts used across the projects
 
