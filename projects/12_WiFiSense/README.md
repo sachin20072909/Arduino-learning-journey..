@@ -42,7 +42,9 @@ projects/12_WiFiSense/
   and no claim that WiFi sensing itself is new — the contribution is presented
   as a low-cost ESP32 implementation with explicit non-human rejection.
 - **Text-light, diagram-heavy.** Every slide carries one idea and at least one
-  large visual.
+  large, purpose-generated visual.
+- **Presenter-ready.** Every slide carries speaker notes (a short script for
+  that slide) and a fast fade transition.
 
 ## Rebuilding the deck
 

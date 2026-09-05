@@ -167,8 +167,8 @@ def main(stats: bool = False) -> None:
     emit(horizontal_fade(hero, 0.62, 0.14), "s01_hero.png")
 
     # ---- 2. closing slide backdrop ------------------------------------
-    closing = cover(load("hero_title.png"), 13.333 / 7.5, max_w=1700)
-    closing = tone(closing, g=1.30, contrast=1.05, saturate=0.95, blur=1.4)
+    closing = cover(load("closing_wifi.png"), 13.333 / 7.5, max_w=1700)
+    closing = tone(closing, g=1.45, contrast=1.08, saturate=1.05, blur=1.2)
     closing = vertical_fade(horizontal_fade(closing, 0.50, 0.30), 0.20, 0.62)
     emit(closing, "s10_closing.png")
 
@@ -212,12 +212,12 @@ def main(stats: bool = False) -> None:
     # ---- 9. use-case tiles -------------------------------------------------
     tile_aspect = 3.747 / 1.10          # image area inside each use-case card
     tiles = [
-        ("privacy_vs_camera.png", "tile_privacy", 0.50, 1.00, 2.30),
+        ("usecase_privacy.png", "tile_privacy", 0.00, 1.00, 1.95),
         ("usecase_elderly.png", "tile_elderly", 0.00, 1.00, 2.10),
         ("usecase_building.png", "tile_building", 0.00, 1.00, 1.45),
-        ("arch_bg.png", "tile_restricted", 0.00, 1.00, 2.60),
-        ("hero_title.png", "tile_night", 0.00, 1.00, 1.30),
-        ("rf_waves_human.png", "tile_occupancy", 0.00, 1.00, 2.00),
+        ("usecase_restricted.png", "tile_restricted", 0.00, 1.00, 2.30),
+        ("usecase_night.png", "tile_night", 0.00, 1.00, 2.60),
+        ("usecase_occupancy.png", "tile_occupancy", 0.00, 1.00, 1.70),
     ]
     for src, name, x0, x1, g in tiles:
         img = load(src)
@@ -229,7 +229,7 @@ def main(stats: bool = False) -> None:
         emit(round_corners(t, 14), f"{name}.png")
 
     # ---- 10. fills used inside architecture boxes --------------------------
-    esp = cover(load("esp32_board.png"), 4.076 / 0.876, max_w=900)
+    esp = cover(load("esp32_pair.png"), 4.076 / 0.876, max_w=900)
     emit(round_corners(tone(esp, g=1.35, contrast=1.10), 10), "box_esp32.png")
 
     rf = cover(load("rf_waves_human.png"), 4.076 / 0.876, max_w=900)
@@ -239,8 +239,8 @@ def main(stats: bool = False) -> None:
     emit(round_corners(tone(mlbox, g=2.05, contrast=1.10), 10), "box_ml.png")
 
     # ---- 11. demo-slide hardware strip --------------------------------------
-    hw = cover(load("esp32_board.png"), 2.60 / 0.82, max_w=900)
-    emit(round_corners(tone(hw, g=1.30, contrast=1.12, saturate=1.05), 10),
+    hw = cover(load("demo_setup.png"), 2.60 / 0.82, max_w=900)
+    emit(round_corners(tone(hw, g=1.65, contrast=1.12, saturate=1.05), 10),
          "s09_hardware.png")
 
     if stats:

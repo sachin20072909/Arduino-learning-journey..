@@ -26,6 +26,7 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.oxml import parse_xml
+from pptx.oxml.ns import nsdecls
 from pptx.util import Emu, Inches, Pt
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -967,6 +968,81 @@ def slide_impact(prs):
     return s
 
 
+# ----------------------------------------------------------- speaker notes
+
+NOTES = {
+    1: "Open with the line: “We can tell someone is in this room without ever "
+       "taking a picture of them.”\n\n"
+       "WiFiSense reads WiFi Channel State Information from two or three ESP32 "
+       "boards. No camera, no microphone, nothing to wear. Total hardware cost "
+       "is a couple of dev boards and USB cables.\n\n"
+       "Say the tagline out loud: Sense movement. Not identities.",
+    2: "Four reasons cameras fall short, in order of how much people care: "
+       "privacy, blind spots, darkness and glare, and the fact that wearables "
+       "get forgotten or refused.\n\n"
+       "Land the strip at the bottom: we still need to know whether a space is "
+       "occupied — we just should not have to record who is in it.",
+    3: "Walk the chain left to right: an ESP32 transmits, the signal crosses the "
+       "room, a body disturbs it, a second ESP32 records the change as CSI, and "
+       "the model reads the pattern.\n\n"
+       "Emphasise “ordinary WiFi frames” — we are not adding any new "
+       "transmitting hardware to the room.",
+    4: "CSI in one sentence: it is how the signal arrives, not the data it "
+       "carries — amplitude and phase per subcarrier, per packet.\n\n"
+       "The key idea is step 5: the model reads how those numbers evolve over "
+       "seconds, never a single reading.",
+    5: "This is the slide that separates us from a naive demo. A bag, a chair, "
+       "a fan and a door all change the channel too.\n\n"
+       "Call out the line: CSI detects changes in the radio environment, not "
+       "humans directly.\n\n"
+       "Our three defences: temporal patterns, balanced training data that "
+       "includes non-human events, and cross-checking across 2–3 links.",
+    6: "Seven small stages — nothing exotic. Keep the vocabulary light: "
+       "filter, normalise, window, extract a handful of features, classify.\n\n"
+       "Point at the probability bars: the output is a distribution, not a "
+       "verdict. Below threshold we say “uncertain”.",
+    7: "Left column is radio hardware, right column is software, the arrow is "
+       "just numbers moving over a cable.\n\n"
+       "Do not skip the green badge: no camera, no microphone, no video or "
+       "audio is ever captured or stored. Raw CSI is processed locally.",
+    8: "Six places this fits. Keep it to one sentence each — the pictures "
+       "carry the slide.\n\n"
+       "Read the amber strip honestly. Judges reward teams that know their "
+       "limits: results depend on walls, layout and furniture.",
+    9: "Ninety seconds, five steps. Steps 1–4 are the happy path; step 5 is "
+       "the one to watch: move a bag or chair and the signal still changes, but "
+       "the system must not call it a human.\n\n"
+       "Dashboard shows room status, activity, confidence score and alert "
+       "state — plus per-link signal strength.",
+    10: "Impact on the left, roadmap on the right. Say plainly that WiFi sensing "
+        "itself is established research — our contribution is a low-cost "
+        "implementation with explicit non-human rejection.\n\n"
+        "Close on the quote: WiFi is everywhere. Why not use it to sense the "
+        "environment — without seeing it?",
+}
+
+
+def add_notes(slide, number: int) -> None:
+    text = NOTES.get(number)
+    if text:
+        slide.notes_slide.notes_text_frame.text = text
+
+
+def add_transitions(prs) -> None:
+    """Subtle fade between every slide (advance stays on click)."""
+    for slide in prs.slides:
+        sld = slide._element
+        anchor = sld.find(qn("p:clrMapOvr"))
+        if anchor is None:
+            anchor = sld.find(qn("p:cSld"))
+        if anchor is None:
+            continue
+        transition = parse_xml(
+            f'<p:transition {nsdecls("p")} spd="fast" advClick="1">'
+            f'<p:fade thruBlk="0"/></p:transition>')
+        anchor.addnext(transition)
+
+
 # ------------------------------------------------------------------- main
 
 
@@ -975,16 +1051,13 @@ def main() -> None:
     prs.slide_width = Inches(SW)
     prs.slide_height = Inches(SH)
 
-    slide_title(prs)
-    slide_problem(prs)
-    slide_solution(prs)
-    slide_csi(prs)
-    slide_false_positive(prs)
-    slide_pipeline(prs)
-    slide_architecture(prs)
-    slide_usecases(prs)
-    slide_demo(prs)
-    slide_impact(prs)
+    builders = [slide_title, slide_problem, slide_solution, slide_csi,
+                slide_false_positive, slide_pipeline, slide_architecture,
+                slide_usecases, slide_demo, slide_impact]
+    for number, builder in enumerate(builders, start=1):
+        add_notes(builder(prs), number)
+
+    add_transitions(prs)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     prs.save(str(OUT))
