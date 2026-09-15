@@ -18,14 +18,21 @@ const SW = 13.333;
 const SH = 7.5;
 
 const C = {
+  deep: '07111F',
   navy: '0F172A',
   navy2: '111827',
+  card: '0F1B33',
+  card2: '111C31',
+  panel: '15233E',
+  lineDark: '23324B',
   slate: '334155',
-  muted: '64748B',
-  soft: '94A3B8',
+  muted: '9FB0C7',
+  soft: '8FA3BF',
   border: 'E2E8F0',
-  bg: 'F8FAFC',
+  bg: '07111F',
   white: 'FFFFFF',
+  textLight: 'EAF2FF',
+  textSoft: 'C7D6EA',
   purple: '7C3AED',
   purple2: '8B5CF6',
   cyan: '06B6D4',
@@ -46,7 +53,7 @@ const C = {
 function addFooter(slide, n) {
   slide.addShape(pptx.ShapeType.line, {
     x: 0.55, y: 7.05, w: 12.2, h: 0,
-    line: { color: 'D9E2EC', pt: 1 }
+    line: { color: C.lineDark, pt: 1 }
   });
   slide.addText('DataLens AI', {
     x: 0.6, y: 7.08, w: 1.6, h: 0.18,
@@ -60,27 +67,60 @@ function addFooter(slide, n) {
   });
 }
 
-function addHeader(slide, title, subtitle, n) {
-  slide.background = { color: C.bg };
+function addThemedBackground(slide) {
+  slide.background = { color: C.deep };
   slide.addShape(pptx.ShapeType.rect, {
-    x: 0, y: 0, w: SW, h: 0.14,
+    x: 0, y: 0, w: SW, h: 0.12,
     line: { color: C.purple, pt: 0 },
     fill: { color: C.purple }
   });
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 8.2, y: 0.12, w: 5.133, h: 0.04,
+    line: { color: C.cyan, pt: 0 },
+    fill: { color: C.cyan }
+  });
+  slide.addShape(pptx.ShapeType.ellipse, {
+    x: 10.0, y: -0.75, w: 3.6, h: 3.6,
+    line: { color: C.purple2, pt: 0 }, fill: { color: C.purple2, transparency: 78 }
+  });
+  slide.addShape(pptx.ShapeType.ellipse, {
+    x: -0.75, y: 5.1, w: 2.7, h: 2.7,
+    line: { color: C.cyan, pt: 0 }, fill: { color: C.cyan, transparency: 82 }
+  });
+  slide.addShape(pptx.ShapeType.ellipse, {
+    x: 10.9, y: 4.65, w: 2.05, h: 2.05,
+    line: { color: C.teal, pt: 0 }, fill: { color: C.teal, transparency: 84 }
+  });
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 0.42, y: 1.28, w: 12.48, h: 5.5,
+    rectRadius: 0.16,
+    line: { color: C.lineDark, pt: 1 },
+    fill: { color: C.card2, transparency: 12 }
+  });
+}
+
+function addHeader(slide, title, subtitle, n) {
+  addThemedBackground(slide);
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 0.62, y: 0.22, w: 1.62, h: 0.34,
+    rectRadius: 0.08,
+    line: { color: C.lineDark, pt: 1 },
+    fill: { color: C.card }
+  });
   slide.addText('DATAlens AI', {
-    x: 0.62, y: 0.25, w: 1.5, h: 0.22,
-    fontFace: 'Aptos', fontSize: 10, bold: true, color: C.purple,
-    margin: 0
+    x: 0.82, y: 0.33, w: 1.2, h: 0.12,
+    fontFace: 'Aptos', fontSize: 9.5, bold: true, color: C.textLight,
+    margin: 0, align: 'center'
   });
   slide.addText(title, {
-    x: 0.62, y: 0.5, w: 8.7, h: 0.4,
-    fontFace: 'Aptos Display', fontSize: 24, bold: true, color: C.navy,
+    x: 0.62, y: 0.72, w: 8.9, h: 0.4,
+    fontFace: 'Aptos Display', fontSize: 24, bold: true, color: C.white,
     margin: 0
   });
   if (subtitle) {
     slide.addText(subtitle, {
-      x: 0.62, y: 0.9, w: 10.8, h: 0.26,
-      fontFace: 'Aptos', fontSize: 10.5, color: C.muted,
+      x: 0.62, y: 1.1, w: 10.8, h: 0.26,
+      fontFace: 'Aptos', fontSize: 10.5, color: C.textSoft,
       margin: 0
     });
   }
@@ -705,7 +745,7 @@ function addMiniStat(slide, x, y, w, h, label, value, accent, fill) {
   addCard(slide, { x: 4.82, y: 4.18, w: 2.1, h: 1.86, title: 'Data Matrix', body: 'Structured query output in tabular format for validation and export.', fill: C.white, line: C.border, accent: C.cyan, titleSize: 12, bodySize: 9.2 });
   addCard(slide, { x: 7.12, y: 4.18, w: 2.06, h: 1.86, title: 'Insights', body: 'Top product\nTrend summary\nChannel mix\nFollow-up suggestions', fill: C.white, line: C.border, accent: C.teal, titleSize: 12, bodySize: 9.4 });
 
-  slide.addText('Integrated modules', { x: 9.6, y: 1.72, w: 2.1, h: 0.16, fontFace: 'Aptos', fontSize: 10, bold: true, color: C.navy, margin: 0 });
+  slide.addText('Integrated modules', { x: 9.6, y: 1.72, w: 2.1, h: 0.16, fontFace: 'Aptos', fontSize: 10, bold: true, color: C.textSoft, margin: 0 });
   addCard(slide, { x: 9.6, y: 2.0, w: 2.0, h: 4.3, title: 'Interface highlights', body: bulletText([
     'ChatGPT-style conversational interface',
     'Mission / conversation history sidebar',
